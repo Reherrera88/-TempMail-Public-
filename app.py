@@ -17,7 +17,7 @@ app = Flask(__name__, static_folder='static')
 CORS(app)
 
 # Configuración del servidor de correo
-IMAP_HOST = os.getenv('IMAP_HOST', '190.114.254.148')
+IMAP_HOST = os.getenv('IMAP_HOST', '<IMAP_HOST>')
 IMAP_PORT = int(os.getenv('IMAP_PORT', '993'))
 # CSV path: en producción /app/cuentas_kards.csv, en dev relativo al script
 CSV_PATH = os.getenv('CSV_PATH', os.path.join(os.path.dirname(__file__), 'cuentas_kards.csv'))

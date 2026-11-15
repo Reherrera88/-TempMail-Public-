@@ -6,7 +6,7 @@ services:
     container_name: web-tempmail-api
     restart: unless-stopped
     environment:
-      - IMAP_HOST=${IMAP_HOST:-190.114.254.148}
+      - IMAP_HOST=${IMAP_HOST:-<IMAP_HOST>}
       - IMAP_PORT=${IMAP_PORT:-993}
       - CSV_PATH=/app/cuentas_kards.csv
     volumes:
