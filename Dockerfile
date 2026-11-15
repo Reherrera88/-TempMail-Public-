@@ -23,10 +23,10 @@ RUN adduser -D -H -s /sbin/nologin appuser
 
 # Copiar aplicación
 COPY app.py .
-COPY static/ ./static/
+COPY static/ ./static()
 
-# Copiar CSV de cuentas (se montará como volume en producción)
-COPY cuentas_kards.csv .
+# Copiar CSV de ejemplo (en producción se monta el real como volume read-only)
+COPY cuentas_kards.sample.csv ./cuentas_kards.csv
 
 # Permisos
 RUN chown -R appuser:appuser /app

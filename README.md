@@ -213,7 +213,7 @@ Configurado por **Deamon** para las 200 cuentas `@kards.cl` temporales:
 ├── requirements.txt            # flask, flask-cors
 ├── Dockerfile                  # Multi-stage, non-root, healthcheck
 ├── docker-compose-local.yml    # Compose para Pi-ter (local only)
-├── cuentas_kards.csv           # 200 cuentas (email,password) — .gitignore en prod
+├── cuentas_kards.sample.csv    # Ejemplo de formato CSV (3 cuentas demo)
 ├── nginx/
 │   ├── tempmail.conf           # Config producción (Cloudflare Tunnel)
 │   └── tempmail-local.conf     # Config local (puerto 8080, sin Tunnel)
@@ -224,6 +224,8 @@ Configurado por **Deamon** para las 200 cuentas `@kards.cl` temporales:
 │   └── deploy.ps1              # Script PowerShell automatizado
 └── README.md                   # Este archivo
 ```
+
+> **⚠️ Seguridad:** El archivo real `cuentas_kards.csv` con 200 cuentas y contraseñas **NO está en el repo público** (excluido por `.gitignore`). En producción, genera tu propio CSV y móntalo como volume read-only. Ver sección "Generar CSV de cuentas".
 
 ---
 
@@ -250,15 +252,68 @@ Configurado por **Deamon** para las 200 cuentas `@kards.cl` temporales:
 
 ---
 
-## 📦 Actualizar Cuentas (CSV)
+## 📦 Generar y Actualizar CSV de Cuentas
 
-```bash
-# En Pi-ter
-sudo cp nuevo_cuentas_kards.csv /home/docker/containers/web/tempmail/cuentas_kards.csv
-docker restart web-tempmail-api
+### Formato requerido
+El CSV debe tener **exactamente 2 columnas**: `email,password`
+
+```csv
+email,password
+nombre+apellido+XXX@kards.cl,password_aleatoria_16_chars
+ejemplo+garcia+123@kards.cl,AbCdEf12!@#$%^&*
+test+rodriguez+456@kards.cl,XyZ789wXyZ789wXy
 ```
 
-El CSV debe tener columnas: `email,password` (200 líneas + header).
+Ver archivo de ejemplo: `cuentas_kards.sample.csv`
+
+### Generar 200 cuentas aleatorias (script Python)
+
+```python
+# generate_accounts.py
+import csv, random, string
+
+nombres = ["carlos", "maria", "jose", "juan", "luis", "ana", "miguel", "laura", "pedro", "sofia", ...]
+apellidos = ["garcia", "rodriguez", "gonzalez", "fernandez", "lopez", "martinez", "sanchez", "perez", ...]
+
+with open('cuentas_kards.csv', 'w', newline='') as f:
+    writer = csv.writer(f)
+    writer.writerow(['email', 'password'])
+    emails = set()
+    while len(emails) < 200:
+        nombre = random.choice(nombres)
+        apellido = random.choice(apellidos)
+        numero = random.randint(1, 999)
+        email = f"{nombre}+{apellido}+{numero:03d}@kards.cl"
+        if email not in emails:
+            emails.add(email)
+            password = ''.join(random.choices(string.ascii_letters + string.digits + '!@#$%', k=16))
+            writer.writerow([email, password])
+
+print("Generadas 200 cuentas en cuentas_kards.csv")
+```
+
+### Desplegar CSV en Pi-ter (producción)
+
+```bash
+# 1. Generar CSV localmente con el script anterior
+python generate_accounts.py
+
+# 2. Copiar a Pi-ter
+scp cuentas_kards.csv pi-ter:/home/docker/containers/web/tempmail/
+
+# 3. Reiniciar API
+ssh pi-ter "docker restart web-tempmail-api"
+```
+
+### En desarrollo local
+
+```bash
+# Copiar sample o generar uno
+cp cuentas_kards.sample.csv cuentas_kards.csv
+# O generar con script arriba
+export CSV_PATH=./cuentas_kards.csv
+python app.py
+```
 
 ---
 

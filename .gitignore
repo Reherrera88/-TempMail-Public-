@@ -27,7 +27,7 @@ Thumbs.db
 
 # Credenciales y datos sensibles
 cuentas_kards.csv
-*.csv
+# *.csv  # Comentado para permitir cuentas_kards.sample.csv
 *.key
 *.pem
 *.crt

@@ -100,16 +100,35 @@ python app.py
 │   ├── 00-charset.conf
 │   └── tempmail.conf
 ├── tempmail/
-│   ├── cuentas_kards.csv          # Montado en API (ro)
+│   ├── cuentas_kards.csv          # Montado en API (ro) — GENERAR LOCALMENTE
 │   ├── index.html                 # Frontend servido por nginx
 │   └── ... (assets)
 ```
 
-## Actualizar CSV de cuentas
+> **⚠️ Importante:** El archivo `cuentas_kards.csv` con 200 cuentas reales y contraseñas **NO está en el repo público**. Debes generarlo localmente y copiarlo a Pi-ter.
+
+## Generar y desplegar CSV de cuentas
+
+### 1. Generar CSV localmente
 ```bash
-# En Pi-ter
-sudo cp nuevo_cuentas_kards.csv /home/docker/containers/web/tempmail/cuentas_kards.csv
-docker restart web-tempmail-api
+# Opción A: Usar script Python (ver README.md principal sección "Generar CSV")
+python generate_accounts.py
+
+# Opción B: Copiar y editar el sample
+cp cuentas_kards.sample.csv cuentas_kards.csv
+# Editar con 200 cuentas reales
+```
+
+### 2. Desplegar a Pi-ter
+```bash
+scp cuentas_kards.csv pi-ter:/home/docker/containers/web/tempmail/
+ssh pi-ter "docker restart web-tempmail-api"
+```
+
+### 3. Verificar
+```bash
+ssh pi-ter "curl -s http://localhost:5000/health"
+# → {"status":"ok","accounts":200}
 ```
 
 ## Troubleshooting
