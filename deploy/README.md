@@ -3,7 +3,63 @@
 ## Descripcion
 Pagina web para acceso rapido a 200 cuentas de correo temporales @kards.cl sin necesidad de contrasena. Backend Flask + IMAP a iRedMail (Dovecot) en VPS configurable via `IMAP_HOST`.
 
-## Arquitectura (Local only - sin Cloudflare Tunnel)
+## Opcion A: Despliegue en un Solo Servidor (VPS + iRedMail + TempMail) — RECOMENDADO
+
+Si el servidor de correo (iRedMail) y TempMail corren en el **mismo VPS**, el deploy es mas simple:
+
+### Ventajas
+- IMAP a `localhost:993` (sin latencia, sin firewall extra)
+- Un solo servidor que mantener
+- Menos configuracion de red
+- Puerto 8080 unico expuesto
+
+### Arquitectura Single Server
+```
++---------------------+     +----------------------+     +-----------------+
+|   USUARIO           |---->|  nginx (VPS)         |---->|  Flask API      |
+|   http://<VPS_IP>   |     |  tempmail-nginx      |     |  tempmail-api   |
+|   :8080             |     |  :8080               |     |  :5000          |
++---------------------+     +----------------------+     |  (IMAP local) |
+                                |                        +-----------------+
+                                v
+                       /usr/share/nginx/html/tempmail/index.html
+                       
+IMAP -> localhost:993 (Dovecot iRedMail en mismo VPS)
+```
+
+### 1. Preparar en el VPS
+```bash
+# En el VPS (donde corre iRedMail)
+mkdir -p /home/docker/tempmail
+cp cuentas_kards.csv /home/docker/tempmail/
+
+# Copiar archivos del proyecto
+scp -r static/* root@<VPS_IP>:/home/docker/tempmail/
+scp nginx/tempmail-single.conf root@<VPS_IP>:/home/docker/tempmail/
+scp docker-compose-single.yml root@<VPS_IP>:/home/docker/tempmail/
+```
+
+### 2. Build y deploy
+```bash
+ssh root@<VPS_IP>
+cd /home/docker/tempmail
+docker compose -f docker-compose-single.yml build tempmail-api
+docker compose -f docker-compose-single.yml up -d
+```
+
+### 3. Verificar
+```bash
+curl http://<VPS_IP>:8080/health
+# > {"status":"ok","accounts":200}
+
+# Frontend: http://<VPS_IP>:8080
+```
+
+---
+
+## Opcion B: Despliegue Separado (Pi-ter + VPS Mail) — Legacy
+
+### Arquitectura (Local only - sin Cloudflare Tunnel)
 ```
 +---------------------+     +----------------------+     +-----------------+
 |   USUARIO           |---->|  nginx (Pi-ter)      |---->|  Flask API      |

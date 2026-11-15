@@ -111,32 +111,54 @@ curl http://<PI_TER_IP>:8080/api/accounts
 
 ---
 
-## Desarrollo Local
+## Despliegue en un Solo Servidor (VPS + iRedMail + TempMail)
 
+Si el servidor de correo (iRedMail) y TempMail corren en el **mismo VPS**, el deploy se simplifica:
+
+### Prerrequisitos
+- VPS con iRedMail instalado (Dovecot en puerto 993, Postfix en 25/587/465)
+- Docker + Docker Compose instalados en el VPS
+- Cuentas temporales ya creadas en iRedMail (dominio `@kards.cl`)
+
+### 1. Preparar en el VPS
 ```bash
-# Clonar repo
-git clone https://github.com/Reherrera88/-TempMail-Public-.git
-cd -TempMail-Public-
+# En el VPS (donde corre iRedMail)
+mkdir -p /home/docker/tempmail
+cp cuentas_kards.csv /home/docker/tempmail/
 
-# Entorno virtual
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# Dependencias
-pip install -r requirements.txt
-
-# CSV de cuentas (copiar sample o generar uno)
-cp cuentas_kards.sample.csv cuentas_kards.csv
-
-# Variables de entorno
-export IMAP_HOST=<IP_DEL_VPS_MAIL>
-export IMAP_PORT=993
-export CSV_PATH=./cuentas_kards.csv
-
-# Ejecutar
-python app.py
-# Abrir http://localhost:5000
+# Copiar archivos del proyecto
+scp -r static/* root@<VPS_IP>:/home/docker/tempmail/
+scp nginx/tempmail-single.conf root@<VPS_IP>:/home/docker/tempmail/
+scp docker-compose-single.yml root@<VPS_IP>:/home/docker/tempmail/
 ```
+
+### 2. Build y deploy
+```bash
+ssh root@<VPS_IP>
+cd /home/docker/tempmail
+docker compose -f docker-compose-single.yml build tempmail-api
+docker compose -f docker-compose-single.yml up -d
+```
+
+### 3. Verificar
+```bash
+# Health check (desde el VPS o red local)
+curl http://<VPS_IP>:8080/health
+# > {"status":"ok","accounts":200}
+
+# Frontend
+# Abrir en navegador: http://<VPS_IP>:8080
+```
+
+**Ventajas:**
+- Sin red `web-network` externa necesaria
+- IMAP a `localhost:993` (sin latencia de red)
+- Menos configuración de firewall (solo puerto 8080 expuesto)
+- Un solo servidor que mantener
+
+---
+
+## Desarrollo Local
 
 ---
 

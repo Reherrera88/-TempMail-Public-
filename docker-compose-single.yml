@@ -1,0 +1,39 @@
+# Single-server deployment: TempMail + Mail Server on same VPS
+# Run this on the VPS (190.114.254.148) where iRedMail is installed
+
+services:
+  # TempMail Backend API
+  tempmail-api:
+    build:
+      context: ./tempmail-src
+      dockerfile: Dockerfile
+    container_name: tempmail-api
+    restart: unless-stopped
+    environment:
+      - IMAP_HOST=localhost
+      - IMAP_PORT=993
+      - CSV_PATH=/app/cuentas_kards.csv
+    volumes:
+      - ./tempmail/cuentas_kards.csv:/app/cuentas_kards.csv:ro
+    networks:
+      - tempmail-network
+    # Conectar a red del host para acceder a Dovecot/Postfix en localhost
+    network_mode: "host"
+
+  # TempMail Frontend (nginx)
+  tempmail-nginx:
+    image: nginx:alpine
+    container_name: tempmail-nginx
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./tempmail:/usr/share/nginx/html/tempmail:ro
+      - ./nginx/tempmail-single.conf:/etc/nginx/conf.d/tempmail-single.conf:ro
+    networks:
+      - tempmail-network
+    network_mode: "host"
+
+networks:
+  tempmail-network:
+    driver: bridge
