@@ -1,0 +1,31 @@
+services:
+  web-tempmail:
+    build:
+      context: /home/docker/containers/web/tempmail-src
+      dockerfile: Dockerfile
+    container_name: web-tempmail-api
+    restart: unless-stopped
+    environment:
+      - IMAP_HOST=190.114.254.148
+      - IMAP_PORT=993
+      - CSV_PATH=/app/cuentas_kards.csv
+    volumes:
+      - /home/docker/containers/web/tempmail/cuentas_kards.csv:/app/cuentas_kards.csv:ro
+    networks:
+      - web-network
+
+  web-tempmail-nginx:
+    image: nginx:alpine
+    container_name: web-tempmail-nginx
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - /home/docker/containers/web/tempmail:/usr/share/nginx/html/tempmail:ro
+      - /home/docker/containers/web/nginx-conf/tempmail-local.conf:/etc/nginx/conf.d/tempmail-local.conf:ro
+    networks:
+      - web-network
+
+networks:
+  web-network:
+    external: true

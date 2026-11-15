@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TempMail @kards.cl — Acceso rápido a 200 cuentas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0f1a;
+            --bg-elevated: #111827;
+            --card: #151c2e;
+            --card-hover: #1a2338;
+            --border: #2a3548;
+            --text: #e8ecf3;
+            --text-muted: #7a8aa8;
+            --accent: #22d3ee;
+            --accent-dim: #15a8b8;
+            --danger: #f87171;
+            --success: #4ade80;
+            --font-mono: 'JetBrains Mono', monospace;
+            --font-sans: 'Inter', system-ui, sans-serif;
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: var(--font-sans);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        
+        /* Background pattern */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: 
+                radial-gradient(ellipse 80% 50% at 50% -20%, rgba(34, 211, 238, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse 60% 40% at 100% 100%, rgba(34, 211, 238, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+            padding-top: 1rem;
+        }
+        
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent), #3b82f6);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-mono);
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--bg);
+        }
+        
+        h1 {
+            font-size: clamp(1.75rem, 4vw, 2.5rem);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, var(--text), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1rem;
+            margin-top: 0.5rem;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .stat {
+            text-align: center;
+            padding: 0.75rem 1.25rem;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+        
+        .stat-value {
+            font-family: var(--font-mono);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        /* Search/Filter */
+        .search-box {
+            max-width: 500px;
+            margin: 0 auto 2rem;
+            position: relative;
+        }
+        
+        .search-box input {
+            width: 100%;
+            padding: 0.875rem 1rem 0.875rem 3rem;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            font-family: var(--font-sans);
+            font-size: 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.15);
+        }
+        
+        .search-box input::placeholder {
+            color: var(--text-muted);
+        }
+        
+        .search-box svg {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+        
+        /* Accounts Grid */
+        .accounts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+        
+        .account-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .account-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), #3b82f6);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .account-card:hover {
+            background: var(--card-hover);
+            border-color: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+        
+        .account-card:hover::before {
+            opacity: 1;
+        }
+        
+        .account-email {
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text);
+            word-break: break-all;
+            margin-bottom: 1rem;
+        }
+        
+        .account-email .local-part {
+            color: var(--accent);
+        }
+        
+        .account-email .domain {
+            color: var(--text-muted);
+        }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: none;
+            border-radius: 8px;
+            font-family: var(--font-sans);
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #3b82f6);
+            color: var(--bg);
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
+        
+        .btn-primary:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .btn svg {
+            width: 18px;
+            height: 18px;
+        }
+        
+        .card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        
+        .email-count {
+            font-family: var(--font-mono);
+            color: var(--accent);
+        }
+        
+        /* Loading state */
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 15, 26, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            gap: 1rem;
+        }
+        
+        .loading-overlay.hidden {
+            display: none;
+        }
+        
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Empty state */
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-muted);
+        }
+        
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        
+        /* Modal for email view */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease;
+        }
+        
+        .modal-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .modal {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 720px;
+            max-height: 90vh;
+            overflow: hidden;
+            transform: scale(0.95);
+            transition: transform 0.2s ease;
+        }
+        
+        .modal-overlay.open .modal {
+            transform: scale(1);
+        }
+        
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .modal-header h2 {
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 8px;
+            transition: all 0.15s;
+        }
+        
+        .modal-close:hover {
+            background: var(--card);
+            color: var(--text);
+        }
+        
+        .modal-body {
+            padding: 1.5rem;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        
+        .email-detail {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .email-field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        
+        .email-field label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+        
+        .email-field span {
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+            color: var(--text);
+            word-break: break-all;
+        }
+        
+        .email-body {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            white-space: pre-wrap;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            line-height: 1.7;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        /* Responsive */
+        @media (max-width: 640px) {
+            .container { padding: 1.5rem 1rem; }
+            .accounts-grid { grid-template-columns: 1fr; }
+            .stats { gap: 1rem; }
+            .stat { padding: 0.5rem 1rem; }
+        }
+        
+        /* Reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading overlay -->
+    <div class="loading-overlay" id="loadingOverlay" role="status" aria-live="polite">
+        <div class="spinner" aria-hidden="true"></div>
+        <p style="color: var(--text-muted);">Cargando cuentas...</p>
+    </div>
+
+    <div class="container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon">TM</div>
+                <h1>TempMail @kards.cl</h1>
+            </div>
+            <p class="subtitle">Acceso rápido a 200 cuentas temporales sin contraseña</p>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-value" id="totalAccounts">200</div>
+                    <div class="stat-label">Cuentas</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="totalEmails">—</div>
+                    <div class="stat-label">Correos totales</div>
+                </div>
+            </div>
+        </header>
+
+        <div class="search-box">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="search" id="searchInput" placeholder="Buscar por nombre, apellido o email..." aria-label="Buscar cuentas">
+        </div>
+
+        <div class="accounts-grid" id="accountsGrid" role="list" aria-label="Lista de cuentas de correo">
+            <!-- Cards se inyectan aquí -->
+        </div>
+
+        <div class="empty-state hidden" id="emptyState" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="8" y1="8" x2="14" y2="14"></line><line x1="14" y1="8" x2="8" y2="14"></line></svg>
+            <p>No se encontraron cuentas que coincidan con la búsqueda.</p>
+        </div>
+    </div>
+
+    <!-- Modal para ver emails -->
+    <div class="modal-overlay" id="emailModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modalTitle">Correos de <span id="modalEmail"></span></h2>
+                <button class="modal-close" id="modalClose" aria-label="Cerrar">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Lista de emails se inyecta aquí -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Estado global
+        let allAccounts = [];
+        let currentAccountEmails = [];
+        let emailPolling = null;
+
+        // Elementos DOM
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const accountsGrid = document.getElementById('accountsGrid');
+        const searchInput = document.getElementById('searchInput');
+        const emptyState = document.getElementById('emptyState');
+        const totalAccountsEl = document.getElementById('totalAccounts');
+        const totalEmailsEl = document.getElementById('totalEmails');
+        const emailModal = document.getElementById('emailModal');
+        const modalEmail = document.getElementById('modalEmail');
+        const modalBody = document.getElementById('modalBody');
+        const modalClose = document.getElementById('modalClose');
+
+        // Inicialización
+        async function init() {
+            try {
+                await loadAccounts();
+                setupEventListeners();
+            } catch (err) {
+                console.error('Error inicializando:', err);
+                accountsGrid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><p style="color:var(--danger)">Error cargando cuentas. Recarga la página.</p></div>';
+            } finally {
+                loadingOverlay.classList.add('hidden');
+            }
+        }
+
+        async function loadAccounts() {
+            const res = await fetch('/api/accounts');
+            if (!res.ok) throw new Error('No se pudieron cargar las cuentas');
+            const data = await res.json();
+            allAccounts = data;
+            totalAccountsEl.textContent = allAccounts.length;
+            renderAccounts(allAccounts);
+            updateTotalEmails();
+        }
+
+        async function updateTotalEmails() {
+            // Contar emails de las primeras 10 cuentas para estimar
+            let total = 0;
+            const sample = allAccounts.slice(0, 10);
+            for (const acc of sample) {
+                try {
+                    const res = await fetch(`/api/emails/${encodeURIComponent(acc.email)}?limit=1`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        total += data.total;
+                    }
+                } catch {}
+            }
+            // Extrapolar
+            if (sample.length > 0) {
+                totalEmailsEl.textContent = '~' + Math.round(total / sample.length * allAccounts.length).toLocaleString();
+            }
+        }
+
+        function renderAccounts(accounts) {
+            if (accounts.length === 0) {
+                accountsGrid.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                emptyState.setAttribute('aria-hidden', 'false');
+                return;
+            }
+            emptyState.classList.add('hidden');
+            emptyState.setAttribute('aria-hidden', 'true');
+
+            accountsGrid.innerHTML = accounts.map(acc => {
+                const [local, domain] = acc.email.split('@');
+                return `
+                    <article class="account-card" role="listitem" data-email="${escapeHtml(acc.email)}">
+                        <div class="account-email">
+                            <span class="local-part">${escapeHtml(local)}</span>
+                            <span class="domain">@${escapeHtml(domain)}</span>
+                        </div>
+                        <button class="btn btn-primary" data-action="open-emails" data-email="${escapeHtml(acc.email)}" aria-label="Ver correos de ${escapeHtml(acc.email)}">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                            Ver correos
+                        </button>
+                        <div class="card-footer">
+                            <span class="email-count" data-count-email="${escapeHtml(acc.email)}">— correos</span>
+                        </div>
+                    </article>
+                `;
+            }).join('');
+
+            // Cargar contadores de emails en background (primeras 20)
+            loadEmailCounts(accounts.slice(0, 20));
+        }
+
+        async function loadEmailCounts(accounts) {
+            for (const acc of accounts) {
+                try {
+                    const res = await fetch(`/api/emails/${encodeURIComponent(acc.email)}?limit=1`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        const el = document.querySelector(`[data-count-email="${escapeHtml(acc.email)}"]`);
+                        if (el) {
+                            el.textContent = data.total === 1 ? '1 correo' : `${data.total} correos`;
+                            el.style.color = data.total > 0 ? 'var(--success)' : 'var(--text-muted)';
+                        }
+                    }
+                } catch {}
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function filterAccounts(query) {
+            const q = query.toLowerCase().trim();
+            if (!q) {
+                renderAccounts(allAccounts);
+                return;
+            }
+            const filtered = allAccounts.filter(acc => 
+                acc.email.toLowerCase().includes(q)
+            );
+            renderAccounts(filtered);
+        }
+
+        async function openEmailModal(email) {
+            modalEmail.textContent = email;
+            modalBody.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted)"><div class="spinner" style="margin:0 auto 1rem"></div>Cargando correos...</div>';
+            emailModal.classList.add('open');
+            document.body.style.overflow = 'hidden';
+
+            try {
+                const res = await fetch(`/api/emails/${encodeURIComponent(email)}?limit=30`);
+                if (!res.ok) throw new Error('Error cargando correos');
+                const data = await res.json();
+                currentAccountEmails = data.emails;
+                renderEmailList(data.emails, data.total);
+            } catch (err) {
+                modalBody.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--danger)">Error: ${err.message}</div>`;
+            }
+        }
+
+        function renderEmailList(emails, total) {
+            if (emails.length === 0) {
+                modalBody.innerHTML = `
+                    <div style="text-align:center;padding:3rem;color:var(--text-muted)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 1rem;opacity:0.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                        <p>No hay correos en esta cuenta.</p>
+                        <p style="font-size:0.875rem;margin-top:0.5rem">Total histórico: ${total} correos</p>
+                    </div>
+                `;
+                return;
+            }
+
+            modalBody.innerHTML = emails.map((email, idx) => `
+                <article class="email-detail" data-index="${idx}" style="cursor:pointer;border-bottom:1px solid var(--border);padding-bottom:1rem;margin-bottom:1rem;${idx === emails.length-1 ? 'border-bottom:none;padding-bottom:0;margin-bottom:0' : ''}">
+                    <div class="email-field">
+                        <label>De</label>
+                        <span>${escapeHtml(email.from)}</span>
+                    </div>
+                    <div class="email-field">
+                        <label>Asunto</label>
+                        <span style="font-family:var(--font-sans);font-weight:500;color:var(--text)">${escapeHtml(email.subject || '(sin asunto)')}</span>
+                    </div>
+                    <div class="email-field">
+                        <label>Fecha</label>
+                        <span>${escapeHtml(email.date)}</span>
+                    </div>
+                    <div class="email-field">
+                        <label>Vista previa</label>
+                        <span style="font-family:var(--font-sans);color:var(--text-muted);font-size:0.8rem">${escapeHtml(email.preview)}</span>
+                    </div>
+                </article>
+            `).join('');
+
+            // Click en email para ver completo
+            modalBody.querySelectorAll('.email-detail').forEach(el => {
+                el.addEventListener('click', () => {
+                    const idx = parseInt(el.dataset.index);
+                    showEmailDetail(currentAccountEmails[idx]);
+                });
+            });
+        }
+
+        function showEmailDetail(email) {
+            modalBody.innerHTML = `
+                <div class="email-detail">
+                    <div class="email-field">
+                        <label>De</label>
+                        <span>${escapeHtml(email.from)}</span>
+                    </div>
+                    <div class="email-field">
+                        <label>Asunto</label>
+                        <span style="font-family:var(--font-sans);font-weight:500">${escapeHtml(email.subject || '(sin asunto)')}</span>
+                    </div>
+                    <div class="email-field">
+                        <label>Fecha</label>
+                        <span>${escapeHtml(email.date)}</span>
+                    </div>
+                    <div class="email-field">
+                        <label>Cuerpo completo</label>
+                        <div class="email-body">${escapeHtml(email.body)}</div>
+                    </div>
+                    <button class="btn btn-primary" id="backToList" style="margin-top:1rem;width:auto;min-width:140px">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                        Volver a la lista
+                    </button>
+                </div>
+            `;
+            document.getElementById('backToList').addEventListener('click', () => {
+                renderEmailList(currentAccountEmails, currentAccountEmails.length);
+            });
+        }
+
+        function closeModal() {
+            emailModal.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        function setupEventListeners() {
+            // Búsqueda
+            let searchDebounce;
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(searchDebounce);
+                searchDebounce = setTimeout(() => filterAccounts(e.target.value), 150);
+            });
+
+            // Delegación de clicks en grid
+            accountsGrid.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-action="open-emails"]');
+                if (btn) {
+                    openEmailModal(btn.dataset.email);
+                }
+            });
+
+            // Modal
+            modalClose.addEventListener('click', closeModal);
+            emailModal.addEventListener('click', (e) => {
+                if (e.target === emailModal) closeModal();
+            });
+
+            // Escape para cerrar modal
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && emailModal.classList.contains('open')) {
+                    closeModal();
+                }
+            });
+        }
+
+        // Iniciar
+        init();
+    </script>
+</body>
+</html>
