@@ -23,50 +23,93 @@
 
 ---
 
-## Arquitectura
+## Arquitectura (Single Server — RECOMENDADO)
+
+TempMail e iRedMail corren en el **mismo VPS**. IMAP conecta a `localhost:993`.
 
 ```
 +-----------------------------------------------------------------+
 |                        USUARIO (NAVEGADOR)                       |
-|                    http://<PI_TER_IP>:8080                        |
+|                    http://<VPS_IP>:8080                           |
 +-----------------------------------------------------------------+
                                   |
                                   v
 +-----------------------------------------------------------------+
-|  PI-TER (<PI_TER_IP>)                                           |
+|  VPS UNICO (<VPS_IP>)                                           |
 |  +-------------------------------------------------------------+  |
-|  | web-tempmail-nginx (nginx:alpine) — Puerto 8080             |  |
+|  | tempmail-nginx (nginx:alpine) — Puerto 8080                 |  |
 |  |   +--- /*          > static/index.html (frontend)           |  |
 |  |   +--- /api/*      > proxy a Flask API :5000                |  |
 |  +-------------------------------------------------------------+  |
 |                                  |                               |
 |                                  v                               |
 |  +-------------------------------------------------------------+  |
-|  | web-tempmail-api (Python 3.12 + Flask) — Puerto 5000        |  |
+|  | tempmail-api (Python 3.12 + Flask) — Puerto 5000            |  |
 |  |   +--- GET /api/accounts          > lista 200 cuentas       |  |
 |  |   +--- GET /api/emails/<email>    > ultimos 30 emails       |  |
 |  |   +--- GET /api/email/<email>/<uid> > email completo        |  |
-|  |   +--- IMAP SSL > <IMAP_HOST>:993 (Dovecot iRedMail)        |  |
+|  |   +--- IMAP SSL > localhost:993 (Dovecot iRedMail LOCAL)    |  |
 |  +-------------------------------------------------------------+  |
-+-----------------------------------------------------------------+
-                                  |
-                                  v
-+-----------------------------------------------------------------+
-|  VPS MAIL SERVER (<IMAP_HOST>)                                  |
-|  iRedMail (dev/master) — Debian 13                              |
-|  Dovecot IMAP SSL (puerto 993)                                  |
+|                                  |                               |
+|                                  v                               |
 |  +-------------------------------------------------------------+  |
-|  | 200 cuentas @kards.cl — IMAP only desde <PI_TER_IP>         |  |
-|  |  Cuota: 10 MB | Hash: SSHA512 | Maildir: /var/vmail/        |  |
+|  | iRedMail (dev/master) — Debian 13                            |  |
+|  |  Dovecot IMAP SSL (puerto 993) — SOLO localhost             |  |
+|  |  Postfix SMTP (25/587/465)                                   |  |
+|  |  +-------------------------------------------------------+  |  |
+|  |  | 200 cuentas @kards.cl — IMAP only desde localhost      |  |  |
+|  |  |  Cuota: 10 MB | Hash: SSHA512 | Maildir: /var/vmail/  |  |  |
+|  |  +-------------------------------------------------------+  |  |
 |  +-------------------------------------------------------------+  |
 +-----------------------------------------------------------------+
 ```
 
-**Variables de entorno:** Configura `PI_TER_IP` (IP local de Pi-ter) e `IMAP_HOST` (IP del VPS mail) en tu entorno.
+**Variables de entorno:** Configura `VPS_IP` (IP pública del VPS) en tu entorno. `IMAP_HOST=localhost` ya está configurado en docker-compose.
 
 ---
 
-## Despliegue Rapido (Pi-ter)
+## Despliegue Rapido (Single Server — VPS con iRedMail) — RECOMENDADO
+
+### Prerrequisitos
+- VPS con iRedMail instalado (Dovecot en puerto 993, Postfix en 25/587/465)
+- Docker + Docker Compose instalados en el VPS
+- Cuentas temporales ya creadas en iRedMail (dominio `@kards.cl`)
+
+### 1. Preparar en el VPS
+```bash
+# En el VPS (donde corre iRedMail)
+mkdir -p /home/docker/tempmail
+cp cuentas_kards.csv /home/docker/tempmail/
+
+# Copiar archivos del proyecto
+scp -r static/* root@<VPS_IP>:/home/docker/tempmail/
+scp nginx/tempmail-single.conf root@<VPS_IP>:/home/docker/tempmail/
+scp docker-compose-single.yml root@<VPS_IP>:/home/docker/tempmail/
+```
+
+### 2. Build y deploy
+```bash
+ssh root@<VPS_IP>
+cd /home/docker/tempmail
+docker compose -f docker-compose-single.yml build tempmail-api
+docker compose -f docker-compose-single.yml up -d
+```
+
+### 3. Verificar
+```bash
+# Health check (desde el VPS o red local)
+curl http://<VPS_IP>:8080/health
+# > {"status":"ok","accounts":200}
+
+# Frontend
+# Abrir en navegador: http://<VPS_IP>:8080
+```
+
+---
+
+## Despliegue Legacy (Multi-Server — Pi-ter + VPS)
+
+*Solo si necesitas separar TempMail del mail server.*
 
 ### Prerrequisitos
 - Pi-ter accesible via SSH (`pi-ter` en `.ssh/config` o IP `<PI_TER_IP>`)
@@ -108,53 +151,6 @@ curl http://<PI_TER_IP>:8080/api/accounts
 # Frontend
 # Abrir en navegador: http://<PI_TER_IP>:8080
 ```
-
----
-
-## Despliegue en un Solo Servidor (VPS + iRedMail + TempMail)
-
-Si el servidor de correo (iRedMail) y TempMail corren en el **mismo VPS**, el deploy se simplifica:
-
-### Prerrequisitos
-- VPS con iRedMail instalado (Dovecot en puerto 993, Postfix en 25/587/465)
-- Docker + Docker Compose instalados en el VPS
-- Cuentas temporales ya creadas en iRedMail (dominio `@kards.cl`)
-
-### 1. Preparar en el VPS
-```bash
-# En el VPS (donde corre iRedMail)
-mkdir -p /home/docker/tempmail
-cp cuentas_kards.csv /home/docker/tempmail/
-
-# Copiar archivos del proyecto
-scp -r static/* root@<VPS_IP>:/home/docker/tempmail/
-scp nginx/tempmail-single.conf root@<VPS_IP>:/home/docker/tempmail/
-scp docker-compose-single.yml root@<VPS_IP>:/home/docker/tempmail/
-```
-
-### 2. Build y deploy
-```bash
-ssh root@<VPS_IP>
-cd /home/docker/tempmail
-docker compose -f docker-compose-single.yml build tempmail-api
-docker compose -f docker-compose-single.yml up -d
-```
-
-### 3. Verificar
-```bash
-# Health check (desde el VPS o red local)
-curl http://<VPS_IP>:8080/health
-# > {"status":"ok","accounts":200}
-
-# Frontend
-# Abrir en navegador: http://<VPS_IP>:8080
-```
-
-**Ventajas:**
-- Sin red `web-network` externa necesaria
-- IMAP a `localhost:993` (sin latencia de red)
-- Menos configuración de firewall (solo puerto 8080 expuesto)
-- Un solo servidor que mantener
 
 ---
 
