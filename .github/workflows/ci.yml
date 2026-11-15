@@ -40,7 +40,7 @@ jobs:
       - name: Test API health endpoint
         run: |
           docker run -d --name tempmail-test -p 5000:5000 \
-            -e IMAP_HOST=190.114.254.148 \
+            -e IMAP_HOST=10.0.0.1 \
             -e IMAP_PORT=993 \
             -e CSV_PATH=/app/cuentas_kards.csv \
             tempmail-api-test
