@@ -107,18 +107,18 @@ curl http://<VPS_IP>:8080/health
 
 ---
 
-## Despliegue Legacy (Multi-Server — Pi-ter + VPS)
+## Despliegue Legacy (Multi-Server — Frontend Server + VPS Mail)
 
 *Solo si necesitas separar TempMail del mail server.*
 
 ### Prerrequisitos
-- Pi-ter accesible via SSH (`pi-ter` en `.ssh/config` o IP `<PI_TER_IP>`)
-- Docker + Docker Compose instalados en Pi-ter
+- Servidor Frontend accesible via SSH (`<FRONTEND_HOST>` en `.ssh/config` o IP `<FRONTEND_IP>`)
+- Docker + Docker Compose instalados en Servidor Frontend
 - Red `web-network` externa creada: `docker network create web-network`
 
 ### 1. Preparar directorios y CSV
 ```bash
-ssh pi-ter
+ssh <FRONTEND_HOST>
 sudo mkdir -p /home/docker/containers/web/tempmail
 sudo cp ~/cuentas_kards.csv /home/docker/containers/web/tempmail/
 ```
@@ -126,14 +126,14 @@ sudo cp ~/cuentas_kards.csv /home/docker/containers/web/tempmail/
 ### 2. Copiar archivos del proyecto
 ```bash
 # Desde tu maquina local (repo TempMail)
-scp -r static/* pi-ter:/home/docker/containers/web/tempmail/
-scp nginx/tempmail-local.conf pi-ter:/home/docker/containers/web/nginx-conf/
-scp docker-compose-local.yml pi-ter:/home/docker/containers/web/docker-compose-tempmail.yml
+scp -r static/* <FRONTEND_HOST>:/home/docker/containers/web/tempmail/
+scp nginx/tempmail-local.conf <FRONTEND_HOST>:/home/docker/containers/web/nginx-conf/
+scp docker-compose-local.yml <FRONTEND_HOST>:/home/docker/containers/web/docker-compose-tempmail.yml
 ```
 
 ### 3. Build y deploy
 ```bash
-ssh pi-ter
+ssh <FRONTEND_HOST>
 cd /home/docker/containers/web
 docker compose -f docker-compose-tempmail.yml build web-tempmail-api
 docker compose -f docker-compose-tempmail.yml up -d
@@ -142,14 +142,14 @@ docker compose -f docker-compose-tempmail.yml up -d
 ### 4. Verificar
 ```bash
 # Health check
-curl http://<PI_TER_IP>:8080/health
+curl http://<FRONTEND_IP>:8080/health
 # > {"status":"ok","accounts":200}
 
 # Listar cuentas
-curl http://<PI_TER_IP>:8080/api/accounts
+curl http://<FRONTEND_IP>:8080/api/accounts
 
 # Frontend
-# Abrir en navegador: http://<PI_TER_IP>:8080
+# Abrir en navegador: http://<FRONTEND_IP>:8080
 ```
 
 ---

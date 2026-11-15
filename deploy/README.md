@@ -57,48 +57,48 @@ curl http://<VPS_IP>:8080/health
 
 ---
 
-## Opcion B: Despliegue Separado (Pi-ter + VPS Mail) — Legacy
+## Opcion B: Despliegue Separado (Frontend Server + VPS Mail) — Legacy
 
 ### Arquitectura (Local only - sin Cloudflare Tunnel)
 ```
 +---------------------+     +----------------------+     +-----------------+
-|   USUARIO           |---->|  nginx (Pi-ter)      |---->|  Flask API      |
-|   http://<PI_TER_IP>|     |  web-tempmail-       |     |  web-tempmail-  |
-|   :8080             |     |  nginx               |     |  api            |
+|   USUARIO           |---->|  nginx (Frontend)    |---->|  Flask API      |
+|   http://<FRONTEND_IP>|    |  tempmail-nginx      |     |  tempmail-api   |
+|   :8080             |     |  :8080               |     |  :5000          |
 +---------------------+     +----------------------+     |  (IMAP -> ired) |
-                               |                        +-----------------+
-                               v
+                                |                        +-----------------+
+                                v
                        /usr/share/nginx/html/tempmail/index.html
                        
-Variables: <PI_TER_IP> = IP local de Pi-ter, <IMAP_HOST> = IP del VPS mail
+Variables: <FRONTEND_IP> = IP del servidor frontend, <IMAP_HOST> = IP del VPS mail
 ```
 
 ## Componentes
 
 | Componente | Contenedor | Puerto | Descripcion |
 |------------|------------|--------|-------------|
-| Frontend (static) | `web-tempmail-nginx` | 8080 | Sirve index.html + assets |
-| Backend API | `web-tempmail-api` | 5000 | Flask + IMAP a iRedMail |
-| Proxy nginx | `web-tempmail-nginx` | 8080 | `/api/*` -> backend |
+| Frontend (static) | `tempmail-nginx` | 8080 | Sirve index.html + assets |
+| Backend API | `tempmail-api` | 5000 | Flask + IMAP a iRedMail |
+| Proxy nginx | `tempmail-nginx` | 8080 | `/api/*` -> backend |
 
-## Despliegue en Pi-ter (produccion)
+## Despliegue en Frontend Server (produccion)
 
-### 1. Preparar directorios en la Pi
+### 1. Preparar directorios en el Servidor Frontend
 ```bash
-ssh pi-ter
+ssh <FRONTEND_HOST>
 sudo mkdir -p /home/docker/containers/web/tempmail
 sudo cp ~/cuentas_kards.csv /home/docker/containers/web/tempmail/
 ```
 
-### 2. Copiar archivos estaticos a la Pi
+### 2. Copiar archivos estaticos al Servidor Frontend
 ```bash
 # Desde tu maquina local (Aaron project)
-scp -r tempmail/static/* pi-ter:/home/docker/containers/web/tempmail/
+scp -r tempmail/static/* <FRONTEND_HOST>:/home/docker/containers/web/tempmail/
 ```
 
 ### 3. Actualizar docker-compose y reconstruir
 ```bash
-ssh pi-ter
+ssh <FRONTEND_HOST>
 cd /home/docker/containers/web
 # Copiar el nuevo docker-compose.yml y nginx-conf/tempmail-local.conf
 docker compose -f docker-compose-tempmail.yml build web-tempmail-api
@@ -119,7 +119,7 @@ curl http://localhost/api/accounts
 curl "http://localhost/api/emails/thiago+vinas+539@kards.cl?limit=5"
 ```
 
-**Nota:** Sin Cloudflare Tunnel. Acceso via `http://<PI_TER_IP>:8080`
+**Nota:** Sin Cloudflare Tunnel. Acceso via `http://<FRONTEND_IP>:8080`
 
 ## Desarrollo local
 
@@ -142,7 +142,7 @@ python app.py
 | GET | `/api/email/<email>/<uid>` | Correo completo por UID |
 | GET | `/health` | Healthcheck |
 
-## Estructura de archivos en Pi-ter
+## Estructura de archivos en Servidor Frontend
 
 ```
  /home/docker/containers/web/
@@ -156,7 +156,7 @@ python app.py
 |    +--- ... (assets)
 ```
 
-> **Importante:** El archivo `cuentas_kards.csv` con 200 cuentas reales y contrasenas **NO esta en el repo publico**. Debes generarlo localmente y copiarlo a Pi-ter.
+> **Importante:** El archivo `cuentas_kards.csv` con 200 cuentas reales y contrasenas **NO esta en el repo publico**. Debes generarlo localmente y copiarlo al Servidor Frontend.
 
 ## Generar y desplegar CSV de cuentas
 
@@ -170,15 +170,15 @@ cp cuentas_kards.sample.csv cuentas_kards.csv
 # Editar con 200 cuentas reales
 ```
 
-### 2. Desplegar a Pi-ter
+### 2. Desplegar al Servidor Frontend
 ```bash
-scp cuentas_kards.csv pi-ter:/home/docker/containers/web/tempmail/
-ssh pi-ter "docker restart web-tempmail-api"
+scp cuentas_kards.csv <FRONTEND_HOST>:/home/docker/containers/web/tempmail/
+ssh <FRONTEND_HOST> "docker restart web-tempmail-api"
 ```
 
 ### 3. Verificar
 ```bash
-ssh pi-ter "curl -s http://localhost:5000/health"
+ssh <FRONTEND_HOST> "curl -s http://localhost:5000/health"
 # > {"status":"ok","accounts":200}
 ```
 
