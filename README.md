@@ -384,16 +384,3 @@ ssh <FRONTEND_HOST> "tail -f /var/log/nginx/tempmail_access.log"
 ## Licencia
 
 MIT License — Libre uso, modificacion y distribucion.
-
----
-
-## Enlaces
-
-- **Repo:** https://github.com/Reherrera88/-TempMail-Public-
-- **Wiki:** https://github.com/Reherrera88/wiki_opencode
-- **Deploy local:** http://<PI_TER_IP>:8080
-- **Mail Server:** https://mail.conectarte.cl/iredadmin/
-
----
-
-> **Nota:** El nombre del repositorio comienza con guion (`-TempMail-Public-`) por convención del usuario. En GitHub se accede como `https://github.com/Reherrera88/-TempMail-Public-`.
