@@ -1,6 +1,6 @@
 # TempMail @kards.cl
 
-> **Plataforma web para acceso rápido a 200 cuentas de correo temporales** — sin contraseña, solo IMAP, desplegada localmente en Pi-ter.
+> **Plataforma web para acceso rápido a 200 cuentas de correo temporales** — sin contraseña, solo IMAP, desplegada localmente en VPS.
 
 [![Deploy](https://img.shields.io/badge/deploy-Pi--ter%20%7C%20Docker-blue)](https://github.com/Reherrera88/-TempMail-Public-)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -17,7 +17,7 @@
 - Sin login de usuario — auto-login via credenciales en backend
 - 200 cuentas formato `nombre+apellido+XXX@kards.cl` (aleatorias)
 - 10 MB cuota por cuenta
-- Solo IMAP SSL desde IP Pi-ter (configurable via `PI_TER_IP`) — SMTP/POP3/Roundcube bloqueados
+- Solo IMAP SSL desde IP Frontend (configurable via `FRONTEND_IP`) — SMTP/POP3/Roundcube bloqueados
 - Dockerizado — backend API + nginx estático
 - Solo red local — `http://<PI_TER_IP>:8080` (sin Cloudflare Tunnel)
 
@@ -210,13 +210,13 @@ Configurado para las 200 cuentas `@kards.cl` temporales:
 
 | Protocolo | Acceso | Detalle |
 |-----------|--------|---------|
-| IMAP SSL (993) | Solo `<PI_TER_IP>` | `allow_nets=<PI_TER_IP>` en Dovecot passdb/userdb |
+| IMAP SSL (993) | Solo `<FRONTEND_IP>` | `allow_nets=<FRONTEND_IP>` en Dovecot passdb/userdb |
 | SMTP AUTH (25/587/465) | Bloqueado | `smtpd_sender_restrictions` + `check_sender_access` |
 | POP3/POP3S (110/995) | Bloqueado | Dovecot protocol config |
 | Roundcube (webmail) | Bloqueado | Sin credenciales validas para login |
 | ManageSieve | Bloqueado | Dovecot protocol config |
 
-### Nivel Aplicacion (Pi-ter)
+### Nivel Aplicación (Frontend Server)
 - CSV montado **read-only** (`:ro`) en contenedor API
 - Usuario **no-root** en Dockerfile (`appuser` UID 1000)
 - **Healthcheck** activo cada 30s
@@ -232,7 +232,7 @@ Configurado para las 200 cuentas `@kards.cl` temporales:
 +--- app.py                      # Backend Flask + IMAP
 +--- requirements.txt            # flask, flask-cors
 +--- Dockerfile                  # Multi-stage, non-root, healthcheck
-+--- docker-compose-local.yml    # Compose para Pi-ter (local only)
++--- docker-compose-local.yml    # Compose para Frontend Server (local only)
 +--- cuentas_kards.sample.csv    # Ejemplo de formato CSV (3 cuentas demo)
 +--- nginx/
 |    +--- tempmail.conf          # Config produccion (Cloudflare Tunnel)
@@ -315,17 +315,17 @@ with open('cuentas_kards.csv', 'w', newline='') as f:
 print("Generadas 200 cuentas en cuentas_kards.csv")
 ```
 
-### Desplegar CSV en Pi-ter (produccion)
+### Desplegar CSV en Frontend Server (producción)
 
 ```bash
 # 1. Generar CSV localmente con el script anterior
 python generate_accounts.py
 
-# 2. Copiar a Pi-ter
-scp cuentas_kards.csv pi-ter:/home/docker/containers/web/tempmail/
+# 2. Copiar a Frontend Server
+scp cuentas_kards.csv <FRONTEND_HOST>:/home/docker/containers/web/tempmail/
 
 # 3. Reiniciar API
-ssh pi-ter "docker restart web-tempmail-api"
+ssh <FRONTEND_HOST> "docker restart web-tempmail-api"
 ```
 
 ### En desarrollo local
@@ -350,14 +350,14 @@ python app.py
 | Timeout emails grandes | `proxy_read_timeout` bajo | Aumentar en nginx (`proxy_read_timeout 60s;`) |
 | Contenedor no inicia | Puerto 5000 ocupado / CSV corrupto | `docker logs web-tempmail-api`, validar CSV |
 
-### Logs utiles
+### Logs útiles
 ```bash
 # API logs
-ssh pi-ter "docker logs -f web-tempmail-api"
+ssh <FRONTEND_HOST> "docker logs -f web-tempmail-api"
 
 # Nginx logs
-ssh pi-ter "docker logs -f web-tempmail-nginx"
-ssh pi-ter "tail -f /var/log/nginx/tempmail_access.log"
+ssh <FRONTEND_HOST> "docker logs -f web-tempmail-nginx"
+ssh <FRONTEND_HOST> "tail -f /var/log/nginx/tempmail_access.log"
 ```
 
 ---
@@ -375,7 +375,7 @@ ssh pi-ter "tail -f /var/log/nginx/tempmail_access.log"
 
 | Rol | Agente | Responsabilidad |
 |-----|--------|-----------------|
-| Frontend + Backend + Docker + Deploy | **Aaron** | Paginas web en Pi-ter (Cloudflare Tunnel, Docker, nginx) |
+| Frontend + Backend + Docker + Deploy | **Aaron** | Paginas web en VPS (Docker, nginx, Cloudflare Tunnel opcional) |
 | Mail Server + Restricciones IMAP | **Deamon** | Infraestructura homelab (VPS, Dovecot, Postfix, DNS) |
 | DNS Cloudflare | **Aaron** | Registros A, MX, SPF, DKIM, DMARC para kards.cl |
 

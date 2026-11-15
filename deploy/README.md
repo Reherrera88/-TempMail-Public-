@@ -201,6 +201,6 @@ ssh <FRONTEND_HOST> "curl -s http://localhost:5000/health"
 
 ## Mantenimiento
 
-- Backups CSV: `\\<BACKUP_SERVER_IP>\Backups\pi-ter` (keep-3, cada 2 dias)
+- Backups CSV: `\\<BACKUP_SERVER_IP>\Backups\tempmail` (keep-3, cada 2 dias)
 - Logs nginx: `/var/log/nginx/tempmail_*.log`
-- Sync GitHub: `sudo /usr/local/bin/pi-ter-sync-git.sh` desde `/opt/pi-ter-config`
+- Sync GitHub: `sudo /usr/local/bin/tempmail-sync-git.sh` desde `/opt/tempmail-config`
